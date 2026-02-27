@@ -670,7 +670,7 @@ body {
   flex: 1;
 }
 .player-slot.winner .player-name { color: var(--win); font-weight: 700; }
-.player-slot.loser  .player-name { color: var(--text-dim); text-decoration: line-through; }
+.player-slot.loser  .player-name { color: var(--text-dim); }
 
 .slot-badge {
   display: flex;
