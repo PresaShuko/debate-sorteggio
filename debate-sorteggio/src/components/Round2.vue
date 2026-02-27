@@ -8,17 +8,13 @@ const props = defineProps({
 
 const emit = defineEmits(['updatePlayers', 'updateMatches'])
 
-// Se ci sono già partite, salta la schermata iniziale
 const firstScreen = ref(props.r2Matches.length === 0)
-
-// Pre-compila con i nomi attuali di allPlayers
-const rawInput  = ref(props.allPlayers.map(p => p.name).join('\n'))
-const editMode  = ref(false)
-const editInput = ref('')
+const rawInput    = ref(props.allPlayers.map(p => p.name).join('\n'))
+const editMode    = ref(false)
+const editInput   = ref('')
 
 const lineCount = (text) => text.split('\n').filter(n => n.trim()).length
 
-// Progresso calcolato dai match, non da allPlayers
 const completed = computed(() => props.r2Matches.reduce((a, m) => {
   if (m.p1.r2 !== 'neutral') a++
   if (m.p2?.r2 !== 'neutral') a++
@@ -48,11 +44,9 @@ const createPairings = (playerList) => {
   return pairings
 }
 
-// Costruisce la lista giocatori aggiornata preservando i campi degli altri round
 const buildPlayers = (names) =>
   names.map((name, i) => {
     const existing = props.allPlayers.find(p => p.name === name)
-    // 🔥 Preserva r1 e r3 — resetta solo r2
     return existing
       ? { ...existing, id: i, r2: 'neutral' }
       : { id: i, name: name.trim(), r1: 'neutral', r2: 'neutral', r3: 'neutral' }
@@ -61,14 +55,13 @@ const buildPlayers = (names) =>
 const generateRound2 = () => {
   if (!rawInput.value.trim()) return alert('Inserisci i nomi!')
   firstScreen.value = false
-  const names = rawInput.value.split('\n').filter(n => n.trim())
-  const players = buildPlayers(names)
+  const players = buildPlayers(rawInput.value.split('\n').filter(n => n.trim()))
   emit('updatePlayers', players)
   emit('updateMatches', createPairings(players))
 }
 
 const rimescola = () => {
-  // 🔥 Crea copie fresche preservando i campi degli altri round
+  if (!confirm('Rimescolare il Round 2? I risultati già inseriti verranno azzerati.')) return
   const players = props.allPlayers.map(p => ({ ...p, r2: 'neutral' }))
   emit('updatePlayers', players)
   emit('updateMatches', createPairings(players))
@@ -82,8 +75,8 @@ const cancelEdit = () => { editMode.value = false }
 
 const applyEdit = () => {
   if (!editInput.value.trim()) return alert('La lista non può essere vuota!')
-  const names = editInput.value.split('\n').filter(n => n.trim())
-  const players = buildPlayers(names)
+  if (!confirm('Applicare le modifiche e risorteggiare? I risultati già inseriti verranno azzerati.')) return
+  const players = buildPlayers(editInput.value.split('\n').filter(n => n.trim()))
   emit('updatePlayers', players)
   emit('updateMatches', createPairings(players))
   editMode.value = false

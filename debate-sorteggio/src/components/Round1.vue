@@ -14,7 +14,6 @@ const editInput = ref('')
 
 const lineCount = (text) => text.split('\n').filter(n => n.trim()).length
 
-// Progresso calcolato dai match, non da allPlayers
 const completed = computed(() => props.r1Matches.reduce((a, m) => {
   if (m.p1.r1 !== 'neutral') a++
   if (m.p2?.r1 !== 'neutral') a++
@@ -56,6 +55,7 @@ const generateRound1 = () => {
 }
 
 const rimescola = () => {
+  if (!confirm('Rimescolare il Round 1? I risultati già inseriti verranno azzerati.')) return
   emit('updateMatches', createPairings([...props.allPlayers]))
 }
 
@@ -67,10 +67,10 @@ const cancelEdit = () => { editMode.value = false }
 
 const applyEdit = () => {
   if (!editInput.value.trim()) return alert('La lista non può essere vuota!')
+  if (!confirm('Applicare le modifiche e risorteggiare? I risultati già inseriti verranno azzerati.')) return
   const names = editInput.value.split('\n').filter(n => n.trim())
   const players = names.map((name, i) => {
     const existing = props.allPlayers.find(p => p.name === name)
-    // 🔥 Preserva r2 e r3 se il giocatore esiste già — resetta solo r1
     return existing
       ? { ...existing, id: i, r1: 'neutral' }
       : { id: i, name: name.trim(), r1: 'neutral', r2: 'neutral', r3: 'neutral' }

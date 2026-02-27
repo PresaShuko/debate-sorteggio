@@ -3,17 +3,13 @@ import { computed, ref } from 'vue'
 
 const props = defineProps({
   allPlayers: Array,
-  r3Matches:  Object   // { v: [], p: [] }
+  r3Matches:  Object
 })
 
 const emit = defineEmits(['updatePlayers', 'updateMatches'])
 
-// Pre-compila con i nomi da allPlayers divisi per risultato r2
-const initialV = props.allPlayers.filter(p => p.r2 === 'winner').map(p => p.name).join('\n')
-const initialP = props.allPlayers.filter(p => p.r2 === 'loser').map(p => p.name).join('\n')
-
-const inputV = ref(initialV)
-const inputP = ref(initialP)
+const inputV = ref(props.allPlayers.filter(p => p.r2 === 'winner').map(p => p.name).join('\n'))
+const inputP = ref(props.allPlayers.filter(p => p.r2 === 'loser').map(p => p.name).join('\n'))
 
 const editMode = ref(false)
 const editV    = ref('')
@@ -49,19 +45,15 @@ const createPairings = (players) => {
   return pairings
 }
 
-// Costruisce giocatori preservando r1 e r2 — resetta solo r3
 const buildPlayers = (textV, textP) => {
   const process = (text, r2Val) =>
     text.split('\n').map(n => n.trim()).filter(Boolean).map(name => {
       const existing = props.allPlayers.find(p => p.name === name)
-      // 🔥 Preserva r1 e r2 — resetta solo r3
       return existing
         ? { ...existing, r3: 'neutral' }
         : { id: 0, name, r1: 'neutral', r2: r2Val, r3: 'neutral' }
     })
-  const winners = process(textV, 'winner')
-  const losers  = process(textP, 'loser')
-  return [...winners, ...losers].map((p, i) => ({ ...p, id: i }))
+  return [...process(textV, 'winner'), ...process(textP, 'loser')].map((p, i) => ({ ...p, id: i }))
 }
 
 const generateRound3 = () => {
@@ -74,6 +66,7 @@ const generateRound3 = () => {
 }
 
 const rimescola = () => {
+  if (!confirm('Rimescolare il Round Finale? I risultati già inseriti verranno azzerati.')) return
   const players = props.allPlayers.map(p => ({ ...p, r3: 'neutral' }))
   emit('updatePlayers', players)
   emit('updateMatches', {
@@ -91,6 +84,7 @@ const cancelEdit = () => { editMode.value = false }
 
 const applyEdit = () => {
   if (!editV.value.trim() && !editP.value.trim()) return alert('Le liste non possono essere entrambe vuote!')
+  if (!confirm('Applicare le modifiche e risorteggiare? I risultati già inseriti verranno azzerati.')) return
   const newPlayers = buildPlayers(editV.value, editP.value)
   emit('updatePlayers', newPlayers)
   emit('updateMatches', {
@@ -124,7 +118,6 @@ const toggleMatchResult = (match, role, group) => {
 <template>
   <div class="tab-pane">
 
-    <!-- ── Header ── -->
     <div class="round-header">
       <div class="round-title-group">
         <span class="round-number">03</span>
@@ -139,7 +132,6 @@ const toggleMatchResult = (match, role, group) => {
       </div>
     </div>
 
-    <!-- ── Edit panel ── -->
     <div v-if="editMode && !isInputPhase" class="edit-panel">
       <div class="edit-panel-header">
         <span class="edit-panel-title">✏️ Modifica liste Round 3</span>
@@ -163,7 +155,6 @@ const toggleMatchResult = (match, role, group) => {
       </div>
     </div>
 
-    <!-- ── Fase INPUT: textarea precompilate ── -->
     <div v-if="isInputPhase" class="input-scene" style="grid-template-columns: 1fr 1fr; gap: 20px;">
       <div class="input-card">
         <div class="input-card-header">
@@ -192,10 +183,8 @@ const toggleMatchResult = (match, role, group) => {
       </div>
     </div>
 
-    <!-- ── Fase MATCHES: 2 gironi ── -->
     <div v-else class="grid-2x2">
 
-      <!-- Vincenti -->
       <div class="group-panel tier-gold">
         <div class="group-label"><span>🏆 Vincenti Round 2</span></div>
         <div v-for="(m, i) in r3Matches.v" :key="m.p1.id" class="match-card"
@@ -222,7 +211,6 @@ const toggleMatchResult = (match, role, group) => {
         </div>
       </div>
 
-      <!-- Perdenti -->
       <div class="group-panel tier-stone">
         <div class="group-label"><span>💀 Perdenti Round 2</span></div>
         <div v-for="(m, i) in r3Matches.p" :key="m.p1.id" class="match-card"
