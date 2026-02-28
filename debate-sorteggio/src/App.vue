@@ -8,7 +8,7 @@ const currentTab = ref(0)
 const allPlayers = ref([])
 const r1Matches  = ref([])
 const r2Matches  = ref([])
-const r3Matches  = ref({ v: [], p: [] })
+const r3Matches  = ref({ v: [], p: [], m: [] })
 
 const STORAGE_KEY = 'torneo_refactored'
 
@@ -29,7 +29,7 @@ const loadData = () => {
     allPlayers.value = d.allPlayers || []
     r1Matches.value  = d.r1Matches  || []
     r2Matches.value  = d.r2Matches  || []
-    r3Matches.value  = d.r3Matches  || { v: [], p: [] }
+    r3Matches.value  = d.r3Matches  || { v: [], p: [], m: [] }
     currentTab.value = d.currentTab || 0
   }
 }
@@ -42,7 +42,7 @@ const resetAll = () => {
   allPlayers.value = []
   r1Matches.value  = []
   r2Matches.value  = []
-  r3Matches.value  = { v: [], p: [] }
+  r3Matches.value  = { v: [], p: [], m: [] }
   currentTab.value = 0
   localStorage.removeItem(STORAGE_KEY)
 }

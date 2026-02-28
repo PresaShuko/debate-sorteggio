@@ -18,7 +18,7 @@ const editInput   = ref('')
 
 const completed = computed(() => props.r2Matches.reduce((a, m) => {
   if (m.p1.r2 !== 'neutral') a++
-  if (m.p2?.r2 !== 'neutral') a++
+  if (m.p2 && m.p2.r2 !== 'neutral') a++
   return a
 }, 0))
 const total = computed(() => props.r2Matches.reduce((a, m) => a + (m.p2 ? 2 : 1), 0))

@@ -5,11 +5,11 @@ import { useTournament } from '../composables/useTournament.js'
 
 const props = defineProps({
   allPlayers: Array,
-  r3Matches:  Object   // { v: [], p: [] }
+  r3Matches:  Object   // { v: [], p: [], m: [] }
 })
 const emit = defineEmits(['updatePlayers', 'updateMatches'])
 
-const { lineCount, createPairings, buildPlayers, makeToggleR3 } = useTournament()
+const { lineCount, createPairingsWithLeftover, makeToggleR3 } = useTournament()
 
 const inputV = ref(props.allPlayers.filter(p => p.r2 === 'winner').map(p => p.name).join('\n'))
 const inputP = ref(props.allPlayers.filter(p => p.r2 === 'loser').map(p => p.name).join('\n'))
@@ -20,13 +20,12 @@ const editP    = ref('')
 
 const isInputPhase = computed(() =>
   (!props.r3Matches.v || props.r3Matches.v.length === 0) &&
-  (!props.r3Matches.p || props.r3Matches.p.length === 0)
+  (!props.r3Matches.p || props.r3Matches.p.length === 0) &&
+  (!props.r3Matches.m || props.r3Matches.m.length === 0)
 )
 
 const toggleMatchResult = makeToggleR3(props, emit)
 
-// Costruisce i giocatori di R3 da due testi (vincenti/perdenti)
-// preservando r1 e r2 — resetta solo r3
 const buildR3Players = (textV, textP) => {
   const process = (text, r2Val) =>
     text.split('\n').map(n => n.trim()).filter(Boolean).map(name => {
@@ -40,11 +39,43 @@ const buildR3Players = (textV, textP) => {
 }
 
 const emitR3 = (players) => {
+  const vPlayers = players.filter(p => p.r2 === 'winner')
+  const pPlayers = players.filter(p => p.r2 === 'loser')
+
+  const { pairings: vPairings, leftover: leftV } = createPairingsWithLeftover(vPlayers, 'r3')
+  const { pairings: pPairings, leftover: leftP } = createPairingsWithLeftover(pPlayers, 'r3')
+
+  let finalV = vPairings
+  let finalP = pPairings
+  let finalM = []
+
+  const leftovers = [leftV, leftP].filter(Boolean)
+
+  if (leftovers.length > 0) {
+    const names = leftovers.map(p => `"${p.name}" (${p.r2 === 'winner' ? 'Vincenti' : 'Perdenti'})`).join(' e ')
+    const wantsMixed = confirm(
+      `${names} ${leftovers.length > 1 ? 'sono rimasti' : 'è rimasto'} senza avversario.\n\n` +
+      `Vuoi creare una Lista Spareggio?\n\n` +
+      `OK → Lista Spareggio\nAnnulla → BYE nel proprio girone`
+    )
+    if (wantsMixed) {
+      if (leftV && leftP) {
+        leftV.r3 = 'neutral'
+        leftP.r3 = 'neutral'
+        finalM = [{ p1: leftV, p2: leftP }]
+      } else {
+        const lone = leftV || leftP
+        lone.r3 = 'neutral'
+        finalM = [{ p1: lone, p2: null }]
+      }
+    } else {
+      if (leftV) { leftV.r3 = 'neutral'; finalV.push({ p1: leftV, p2: null }) }
+      if (leftP) { leftP.r3 = 'neutral'; finalP.push({ p1: leftP, p2: null }) }
+    }
+  }
+
   emit('updatePlayers', players)
-  emit('updateMatches', {
-    v: createPairings(players.filter(p => p.r2 === 'winner'), 'r3'),
-    p: createPairings(players.filter(p => p.r2 === 'loser'),  'r3'),
-  })
+  emit('updateMatches', { v: finalV, p: finalP, m: finalM })
 }
 
 const generateRound3 = () => emitR3(buildR3Players(inputV.value, inputP.value))
@@ -67,6 +98,16 @@ const applyEdit = () => {
   emitR3(buildR3Players(editV.value, editP.value))
   editMode.value = false
 }
+
+// ── Computed ──────────────────────────────────────────────────────────────
+const hasMixed = computed(() => !!(props.r3Matches.m && props.r3Matches.m.length > 0))
+
+// FIX: !! necessario perché a && b restituisce b (un oggetto), non true
+const mixedIsCross = computed(() =>
+  !!(hasMixed.value &&
+     props.r3Matches.m[0]?.p1 &&
+     props.r3Matches.m[0]?.p2)
+)
 </script>
 
 <template>
@@ -111,7 +152,7 @@ const applyEdit = () => {
       </div>
     </div>
 
-    <!-- ── Fase INPUT: textarea precompilate ── -->
+    <!-- ── Fase INPUT ── -->
     <div v-if="isInputPhase" class="input-scene" style="grid-template-columns: 1fr 1fr; gap: 20px;">
       <div class="input-card">
         <div class="input-card-header">
@@ -138,8 +179,8 @@ const applyEdit = () => {
       </div>
     </div>
 
-    <!-- ── Fase MATCHES: 2 gironi ── -->
-    <div v-else class="grid-2x2">
+    <!-- ── Fase MATCHES ── -->
+    <div v-else class="grid-r3">
 
       <div class="group-panel tier-gold">
         <div class="group-label"><span>🏆 Vincenti Round 2</span></div>
@@ -148,6 +189,7 @@ const applyEdit = () => {
           :match="m" field="r3" :index="i"
           @toggle="(match, role) => toggleMatchResult(match, role, 'v')"
         />
+        <div v-if="!r3Matches.v || r3Matches.v.length === 0" class="empty-group">Nessuna partita</div>
       </div>
 
       <div class="group-panel tier-stone">
@@ -157,8 +199,43 @@ const applyEdit = () => {
           :match="m" field="r3" :index="i"
           @toggle="(match, role) => toggleMatchResult(match, role, 'p')"
         />
+        <div v-if="!r3Matches.p || r3Matches.p.length === 0" class="empty-group">Nessuna partita</div>
+      </div>
+
+      <!-- Lista Spareggio -->
+      <div v-if="hasMixed" class="group-panel tier-mixed" style="grid-column: 1 / -1;">
+        <div class="group-label">
+          <span>⚡ Lista Spareggio</span>
+          <span v-if="mixedIsCross" class="mixed-legend">
+            🏆 = Vincenti R2 &nbsp;·&nbsp; ⭕ = Perdenti R2
+          </span>
+        </div>
+        <MatchCard
+          v-for="(m, i) in r3Matches.m" :key="m.p1.id"
+          :match="m" field="r3" :index="i"
+          :show-group="mixedIsCross"
+          @toggle="(match, role) => toggleMatchResult(match, role, 'm')"
+        />
       </div>
 
     </div>
   </div>
 </template>
+
+<style scoped>
+.grid-r3 {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 20px;
+}
+.tier-mixed { border-color: var(--accent-mixed, #a855f7); }
+.tier-mixed .group-label {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.mixed-legend { font-size: 0.72rem; color: var(--text-dim, #888); font-weight: normal; }
+.empty-group { color: var(--text-dim, #888); font-size: 0.8rem; text-align: center; padding: 12px; }
+</style>
