@@ -55,8 +55,8 @@ const emitR3 = (players) => {
     const names = leftovers.map(p => `"${p.name}" (${p.r2 === 'winner' ? 'Vincenti' : 'Perdenti'})`).join(' e ')
     const wantsMixed = confirm(
       `${names} ${leftovers.length > 1 ? 'sono rimasti' : 'è rimasto'} senza avversario.\n\n` +
-      `Vuoi creare una Lista Spareggio?\n\n` +
-      `OK → Lista Spareggio\nAnnulla → BYE nel proprio girone`
+      `Vuoi creare una Lista Vincente-Perdente?\n\n` +
+      `OK → Lista Vincente-Perdente\nAnnulla → BYE nel proprio girone`
     )
     if (wantsMixed) {
       if (leftV && leftP) {
@@ -153,7 +153,7 @@ const mixedIsCross = computed(() =>
     </div>
 
     <!-- ── Fase INPUT ── -->
-    <div v-if="isInputPhase" class="input-scene" style="grid-template-columns: 1fr 1fr; gap: 20px;">
+    <div v-if="isInputPhase" class="input-scene input-scene-r3">
       <div class="input-card">
         <div class="input-card-header">
           <h2>🏆 Vincenti R2</h2>
@@ -174,7 +174,7 @@ const mixedIsCross = computed(() =>
           <div class="line-count" v-if="inputP.trim()">{{ lineCount(inputP) }} giocatori</div>
         </div>
       </div>
-      <div style="grid-column: 1 / -1; display: flex; justify-content: center; margin-top: 8px;">
+      <div class="r3-input-footer">
         <button class="btn-primary" @click="generateRound3">🎲 SORTEGGIA ROUND FINALE</button>
       </div>
     </div>
@@ -202,10 +202,10 @@ const mixedIsCross = computed(() =>
         <div v-if="!r3Matches.p || r3Matches.p.length === 0" class="empty-group">Nessuna partita</div>
       </div>
 
-      <!-- Lista Spareggio -->
-      <div v-if="hasMixed" class="group-panel tier-mixed" style="grid-column: 1 / -1;">
+      <!-- Lista Vincente-Perdente -->
+      <div v-if="hasMixed" class="group-panel tier-mixed r3-mixed-panel">
         <div class="group-label">
-          <span>⚡ Lista Spareggio</span>
+          <span>⚡ Lista Vincente-Perdente</span>
           <span v-if="mixedIsCross" class="mixed-legend">
             🏆 = Vincenti R2 &nbsp;·&nbsp; ⭕ = Perdenti R2
           </span>
@@ -228,13 +228,37 @@ const mixedIsCross = computed(() =>
   grid-template-columns: 1fr 1fr;
   gap: 20px;
 }
+
+/* Spareggio: sempre a piena larghezza */
+.r3-mixed-panel {
+  grid-column: 1 / -1;
+}
+
+/* Input R3: 2 colonne su desktop */
+.input-scene-r3 {
+  grid-template-columns: 1fr 1fr;
+  gap: 20px;
+  max-width: 900px;
+}
+
+.r3-input-footer {
+  grid-column: 1 / -1;
+  display: flex;
+  justify-content: center;
+  margin-top: 8px;
+}
+
+/* Mobile: tutto in colonna singola */
+@media (max-width: 900px) {
+  .grid-r3 { grid-template-columns: 1fr; }
+  .input-scene-r3 { grid-template-columns: 1fr; }
+  .r3-mixed-panel { grid-column: 1 / -1; }
+}
+
 .tier-mixed { border-color: var(--accent-mixed, #a855f7); }
 .tier-mixed .group-label {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  flex-wrap: wrap;
-  gap: 8px;
+  display: flex; align-items: center; justify-content: space-between;
+  flex-wrap: wrap; gap: 8px;
 }
 .mixed-legend { font-size: 0.72rem; color: var(--text-dim, #888); font-weight: normal; }
 .empty-group { color: var(--text-dim, #888); font-size: 0.8rem; text-align: center; padding: 12px; }

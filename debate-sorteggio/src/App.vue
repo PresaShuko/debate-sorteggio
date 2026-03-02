@@ -3,6 +3,8 @@ import { ref, computed, watch, onMounted } from 'vue'
 import Round1 from './components/Round1.vue'
 import Round2 from './components/Round2.vue'
 import Round3 from './components/Round3.vue'
+const deferredPrompt = ref(null)
+const showInstallButton = ref(false)
 
 const currentTab = ref(0)
 const allPlayers = ref([])
@@ -59,6 +61,24 @@ const countFromMatches = (matches, field) => {
   return { completed, total }
 }
 
+onMounted(() => {
+  window.addEventListener('beforeinstallprompt', (e) => {
+    e.preventDefault()
+    deferredPrompt.value = e
+    showInstallButton.value = true
+  })
+})
+
+const installPWA = async () => {
+  if (!deferredPrompt.value) return
+  deferredPrompt.value.prompt()
+  const { outcome } = await deferredPrompt.value.userChoice
+  if (outcome === 'accepted') {
+    showInstallButton.value = false
+  }
+  deferredPrompt.value = null
+}
+
 const r1Progress = computed(() => countFromMatches(r1Matches.value, 'r1'))
 const r2Progress = computed(() => countFromMatches(r2Matches.value, 'r2'))
 </script>
@@ -75,6 +95,11 @@ const r2Progress = computed(() => countFromMatches(r2Matches.value, 'r2'))
           <span class="brand-sub">Tournament Manager</span>
         </div>
       </div>
+
+      <button v-if="showInstallButton" class="btn-install" @click="installPWA">
+      📲 Installa App
+      </button>
+
       <div class="header-actions">
         <div v-if="allPlayers.length > 0" class="player-badge">
           <span class="badge-icon">👥</span>
@@ -179,7 +204,10 @@ const r2Progress = computed(() => countFromMatches(r2Matches.value, 'r2'))
   --shadow-accent: 0 0 20px var(--accent-glow);
 }
 
-body {
+/* ── PREVIENE SCROLL ORIZZONTALE ── */
+html, body {
+  overflow-x: hidden;
+  max-width: 100vw;
   font-family: 'DM Sans', sans-serif;
   background: var(--bg);
   color: var(--text);
@@ -206,6 +234,7 @@ body {
   display: flex;
   flex-direction: column;
   min-height: 100vh;
+  overflow-x: hidden;
 }
 
 /* ── HEADER ── */
@@ -371,11 +400,11 @@ body {
   font-weight: 700;
   letter-spacing: 0.5px;
   cursor: pointer;
-  transition: all 0.2s;
+  transition: box-shadow 0.2s;
   white-space: nowrap;
   text-transform: uppercase;
 }
-.btn-primary:hover { box-shadow: var(--shadow-accent); transform: translateY(-1px); }
+.btn-primary:hover { box-shadow: var(--shadow-accent); }
 .btn-primary.small { padding: 8px 16px; font-size: 0.8rem; }
 
 .btn-secondary {
@@ -414,13 +443,11 @@ body {
   .input-scene { grid-template-columns: 1fr 1fr; align-items: start; }
 }
 
-/* Input scene a 4 colonne (per Round 3) — forza sempre 2×2 */
 .input-scene.grid-2x2 {
   max-width: 1200px;
   grid-template-columns: 1fr 1fr;
 }
 
-/* Il bottone CTA occupa tutta la larghezza nella griglia */
 .input-scene .btn-primary-full {
   grid-column: 1 / -1;
   justify-self: center;
@@ -472,7 +499,6 @@ body {
 .input-card textarea::placeholder,
 .group-input::placeholder { color: var(--text-dim); }
 
-/* Textarea più alta nel pannello singolo R1 */
 .input-card textarea.tall { height: 220px; }
 
 .line-count {
@@ -486,7 +512,6 @@ body {
   padding: 2px 8px;
   border-radius: 999px;
   border: 1px solid var(--accent-dim);
-  /* fuori da .textarea-wrapper diventa statico */
 }
 .textarea-wrapper .line-count { position: absolute; }
 .line-count-static {
@@ -610,7 +635,7 @@ body {
   gap: 10px;
   grid-template-columns: repeat(2, 1fr);
   grid-column-gap: 50px;
-  grid-row-gap: 20px; 
+  grid-row-gap: 20px;
 }
 
 .match-card {
@@ -638,14 +663,15 @@ body {
   display: flex;
   flex-direction: row;
   min-height: 52px;
+  height: auto;
 }
 
 .player-slot {
   flex: 1;
   display: flex;
-  align-items: center;
+  align-items: flex-start;
   gap: 7px;
-  padding: 12px 14px;
+  padding: 10px 12px;
   cursor: pointer;
   transition: background 0.15s;
   min-width: 0;
@@ -659,14 +685,17 @@ body {
   cursor: default;
   opacity: 0.5;
   justify-content: center;
+  align-items: center;
 }
 
+/* ── NOME GIOCATORE: wrap invece di troncare ── */
 .player-name {
   font-size: 0.88rem;
   font-weight: 500;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
+  white-space: normal;
+  word-break: break-word;
+  overflow: visible;
+  line-height: 1.3;
   flex: 1;
 }
 .player-slot.winner .player-name { color: var(--win); font-weight: 700; }
@@ -684,6 +713,7 @@ body {
   flex-shrink: 0;
   background: var(--win);
   color: #000;
+  margin-top: 1px;
 }
 .slot-badge.lose { background: var(--lose); color: #fff; }
 
@@ -730,7 +760,6 @@ body {
 }
 .group-icon { font-size: 1.1rem; }
 
-/* Panel border accents */
 .winners-panel { border-top: 2px solid var(--win); }
 .losers-panel  { border-top: 2px solid var(--lose); }
 .tier-gold     { border-top: 2px solid var(--gold); }
@@ -752,7 +781,6 @@ body {
   grid-template-columns: 1fr;
 }
 
-/* Griglia 2×2 fissa: 2 colonne sempre (su schermi ≥ 600px) */
 .grid-2x2 {
   display: grid;
   gap: 16px;
@@ -851,7 +879,6 @@ body {
   grid-column: 1 / -1;
 }
 
-/* btn-ghost — solo outline, per "Annulla" */
 .btn-ghost {
   display: inline-flex;
   align-items: center;
@@ -885,13 +912,101 @@ body {
 ::-webkit-scrollbar-thumb { background: var(--surface2); border-radius: 3px; }
 ::-webkit-scrollbar-thumb:hover { background: var(--border-active); }
 
-/* ── MOBILE REFINEMENTS ── */
-@media (max-width: 480px) {
+/* ── PWA INSTALL BUTTON ── */
+.btn-install {
+  background: linear-gradient(135deg, #00e5ff 0%, #2979ff 100%);
+  color: white;
+  border: none;
+  padding: 8px 16px;
+  border-radius: 20px;
+  font-weight: bold;
+  font-size: 0.9rem;
+  cursor: pointer;
+  box-shadow: 0 4px 15px rgba(0, 229, 255, 0.4);
+  animation: pulse 2s infinite;
+  margin-right: 10px;
+}
+
+@keyframes pulse {
+  0%   { box-shadow: 0 0 0 0   rgba(0, 229, 255, 0.7); }
+  70%  { box-shadow: 0 0 0 10px rgba(0, 229, 255, 0);   }
+  100% { box-shadow: 0 0 0 0   rgba(0, 229, 255, 0);    }
+}
+
+/* ══════════════════════════════════════════════
+   RESPONSIVE — TABLET (≤ 900px)
+   ══════════════════════════════════════════════ */
+@media (max-width: 900px) {
+
+  /* Una sola colonna di match */
+  .matches-grid {
+    grid-template-columns: 1fr;
+    grid-column-gap: 0;
+    grid-row-gap: 12px;
+  }
+
+  /* Round 3: una colonna */
+  .grid-r3 {
+    grid-template-columns: 1fr;
+  }
+
+  /* Edit panel interno a 2 colonne → 1 */
+  .edit-panel-body.grid-2x2-inner {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* ══════════════════════════════════════════════
+   RESPONSIVE — MOBILE (≤ 600px)
+   ══════════════════════════════════════════════ */
+@media (max-width: 600px) {
+
+  /* Nascondi player badge nell'header per risparmiare spazio */
+  .player-badge { display: none; }
+
   .main-header { padding: 12px 16px; }
   .header-brand h1 { font-size: 1.5rem; }
   .brand-sub { display: none; }
   .main-content { padding: 16px 12px; }
   .round-number { font-size: 2.5rem; }
-  .matches-grid { grid-template-columns: 1fr; }
+
+  /* Round header su due righe */
+  .round-header {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+  .round-actions {
+    width: 100%;
+    justify-content: flex-start;
+  }
+
+  .progress-pill { min-width: 70px; }
+
+  /* Input cards */
+  .input-card { padding: 18px 16px; }
+  .edit-panel-field textarea { height: 100px; }
+
+  /* Nav */
+  .sticky-nav button {
+    font-size: 0.68rem;
+    padding: 10px 8px;
+    letter-spacing: 0;
+  }
+
+  /* Match slot */
+  .player-slot { padding: 8px 10px; }
+  .player-name { font-size: 0.82rem; }
+
+  .vs-badge {
+    width: 30px;
+    font-size: 0.55rem;
+  }
+
+  .round-actions .btn-secondary {
+    padding: 7px 10px;
+    font-size: 0.75rem;
+  }
+
+  .group-panel { padding: 12px; }
 }
 </style>

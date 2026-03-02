@@ -39,7 +39,7 @@ export function useTournament() {
 
   /**
    * Come createPairings ma restituisce anche il giocatore rimasto fuori (leftover).
-   * Utile per R3 dove i leftover di V e P possono formare una lista spareggio.
+   * Utile per R3 dove i leftover di V e P possono formare una lista Vincente-Perdente.
    * @returns {{ pairings: Array, leftover: Object|null }}
    */
   const createPairingsWithLeftover = (playerList, field) => {
@@ -99,7 +99,7 @@ export function useTournament() {
 
   /**
    * Versione di makeToggle per R3 che gestisce i 3 gruppi { v, p, m }.
-   * Il gruppo 'm' è lo spareggio misto (opzionale).
+   * Il gruppo 'm' è lo Vincente-Perdente misto (opzionale).
    */
   const makeToggleR3 = (props, emit) => (match, playerRole, group) => {
     const player   = match[playerRole]
