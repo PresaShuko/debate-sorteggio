@@ -49,7 +49,8 @@ const rimescola = () => {
       alrPlay: nuovaCronologia 
     }
   })
-  emit('updateMatches', createPairings([...props.allPlayers], 'r1'))
+  emit('updatePlayers', players)
+  emit('updateMatches', createPairings(players, 'r1'))
 }
 
 const openEdit = () => {
