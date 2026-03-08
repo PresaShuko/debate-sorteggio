@@ -82,7 +82,23 @@ const generateRound3 = () => emitR3(buildR3Players(inputV.value, inputP.value))
 
 const rimescola = () => {
   if (!confirm('Rimescolare il Round Finale? I risultati già inseriti verranno azzerati.')) return
-  emitR3(props.allPlayers.map(p => ({ ...p, r3: 'neutral' })))
+  const players = props.allPlayers.map(p => {
+    // Cloniamo la cronologia
+    let nuovaCronologia = [...p.alrPlay]
+
+    // Se c'è già l'incontro del Round 2, lo togliamo
+    if (nuovaCronologia.length >= 3) {
+      nuovaCronologia.pop()
+    }
+
+    // Restituiamo un NUOVO oggetto (non modifichiamo quello vecchio)
+    return { 
+      ...p, 
+      r3: 'neutral', 
+      alrPlay: nuovaCronologia 
+    }
+  })
+  emitR3(players)
 }
 
 const openEdit = () => {

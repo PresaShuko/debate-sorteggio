@@ -25,14 +25,37 @@ export function useTournament() {
    * @returns {Array} array di { p1, p2 }
    */
   const createPairings = (playerList, field) => {
-    playerList.forEach(p => (p[field] = 'neutral'))
-    const shuffled = shuffle(playerList)
-    const pairings = []
-    while (shuffled.length > 0) {
-      const p1 = shuffled.pop()
-      const p2 = shuffled.length > 0 ? shuffled.pop() : null
-      // BYE: p2 è null, ma il vincitore lo decide l'utente (nessun auto-win)
-      pairings.push({ p1, p2 })
+    let fatto = false
+    while (!fatto) {
+      let incrociati = false
+      playerList.forEach(p => (p[field] = 'neutral'))
+      const shuffled = shuffle(playerList)
+      const pairings = []
+      while (shuffled.length > 0) {
+        const p1 = shuffled.pop()
+        const p2 = shuffled.length > 0 ? shuffled.pop() : null
+
+        if(p1.alrPlay.includes(p2?.id) || p2?.alrPlay.includes(p1.id)) {
+          incrociati = true
+          break
+        }
+        // BYE: p2 è null, ma il vincitore lo decide l'utente (nessun auto-win)
+        pairings.push({ p1, p2 })
+      }
+
+      if (!incrociati) {
+        pairings.forEach( ({ p1, p2}) => {
+           if (p2) {
+            p1.alrPlay.push(p2.id)
+            p2.alrPlay.push(p1.id)
+          } else {
+            // Se è un BYE, possiamo segnarlo così o non mettere nulla
+            p1.alrPlay.push('BYE') 
+          }
+        })
+      }
+
+      if (pairings.length > 0 && !incrociati) fatto = true
     }
     return pairings
   }

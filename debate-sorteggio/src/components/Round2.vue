@@ -36,7 +36,23 @@ const generateRound2 = () => {
 
 const rimescola = () => {
   if (!confirm('Rimescolare il Round 2? I risultati già inseriti verranno azzerati.')) return
-  const players = props.allPlayers.map(p => ({ ...p, r2: 'neutral' }))
+  const players = props.allPlayers.map(p => {
+    // Cloniamo la cronologia
+    let nuovaCronologia = [...p.alrPlay]
+
+    // Se c'è già l'incontro del Round 2, lo togliamo
+    if (nuovaCronologia.length >= 2) {
+      nuovaCronologia.pop()
+    }
+
+    // Restituiamo un NUOVO oggetto (non modifichiamo quello vecchio)
+    return { 
+      ...p, 
+      r2: 'neutral', 
+      alrPlay: nuovaCronologia 
+    }
+  })
+
   emit('updatePlayers', players)
   emit('updateMatches', createPairings(players, 'r2'))
 }
